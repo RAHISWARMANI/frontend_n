@@ -1,0 +1,79 @@
+.stat-card {
+  background: white;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.stat-icon {
+  font-size: 2em;
+  min-width: 50px;
+  text-align: center;
+}
+
+.stat-content {
+  flex: 1;
+}
+
+.stat-label {
+  color: #999;
+  font-size: 0.85em;
+  margin: 0 0 5px 0;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.stat-value {
+  color: #333;
+  font-size: 1.8em;
+  margin: 0 0 5px 0;
+  font-weight: 700;
+}
+
+.stat-subtext {
+  color: #999;
+  font-size: 0.85em;
+  margin: 0;
+}
+
+.stat-card-success .stat-icon {
+  color: #2e7d32;
+}
+
+.stat-card-success .stat-value {
+  color: #2e7d32;
+}
+
+.stat-card-info .stat-icon {
+  color: #667eea;
+}
+
+.stat-card-info .stat-value {
+  color: #667eea;
+}
+
+.stat-card-warning .stat-icon {
+  color: #f57c00;
+}
+
+.stat-card-warning .stat-value {
+  color: #f57c00;
+}
+
+.stat-card-danger .stat-icon {
+  color: #c62828;
+}
+
+.stat-card-danger .stat-value {
+  color: #c62828;
+}
