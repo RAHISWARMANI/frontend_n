@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from "react";
 import { useFeedbackStore, useProjectStore, useAuthStore, useAssignmentStore } from '../store';
 import './AssignmentFeedback.css';
 
 export default function AssignmentFeedback({ projectId, assignmentId, onClose }) {
+  
+  const [reviews, setReviews] = useState([]);
   const [formData, setFormData] = useState({
     grade: 'A',
     score: 85,
@@ -10,14 +12,31 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
     strengths: '',
     areasForImprovement: '',
   });
+  
+  
 
   const { submitFeedback, getFeedbackByProjectAndTeacher } = useFeedbackStore();
   const { getProjectById } = useProjectStore();
   const { currentUser } = useAuthStore();
   const existingFeedback = getFeedbackByProjectAndTeacher(projectId, currentUser?.id);
 
-  const handleSubmitFeedback = (e) => {
+ const handleSubmitFeedback = async (e) => {
     e.preventDefault();
+      try {
+    const response = await fetch('http://localhost:3000/api/reviews', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(formData),
+    });
+
+    const data = await response.json();
+    console.log("SUCCESS:", data);
+    alert("Feedback submitted ✅");
+
+  } catch (error) {
+    console.error("ERROR:", error);
+  }
+  console.log("Reviews:", reviews);
     if (formData.comments && formData.score) {
       const strengthsList = formData.strengths
         .split('\n')
@@ -194,9 +213,23 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
               className="submit-feedback-btn"
             >
               {existingFeedback ? '💾 Update Feedback' : '✅ Submit Feedback'}
+      
             </button>
           </div>
+          <button type="submit">
+  submit feedback
+</button>
+<h3>All Reviews</h3>
+
+{reviews.map((r, index) => (
+  <div key={index} style={{ border: '1px solid gray', margin: '10px', padding: '10px' }}>
+    <p>Grade: {r.grade}</p>
+    <p>Score: {r.score}</p>
+    <p>Comments: {r.comments}</p>
+  </div>
+))}
         </form>
+        
       </div>
     </div>
   );

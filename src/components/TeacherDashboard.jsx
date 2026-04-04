@@ -7,6 +7,10 @@ export default function TeacherDashboard() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedProjectForFeedback, setSelectedProjectForFeedback] = useState(null);
   const [selectedAssignmentForFeedback, setSelectedAssignmentForFeedback] = useState(null);
+  const handleViewDetails = (id) => {
+  console.log("Clicked ID:", id); // debug
+  setSelectedAssignmentForFeedback(id); // you already have this state
+};
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -167,7 +171,12 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
 
-                  <button className="view-btn">View Details →</button>
+  <button 
+  className="view-btn"
+  onClick={() => handleViewDetails(assignment.id)}
+>
+  View Details →
+</button>
                 </div>
               );
             })}

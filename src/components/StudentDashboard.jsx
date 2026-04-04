@@ -39,6 +39,7 @@ export default function StudentDashboard() {
 
   const handleSubmitReview = (e, projectId) => {
     e.preventDefault();
+  console.log("Submit function working");
     if (reviewData.feedback && reviewData.design && reviewData.functionality) {
       submitReview({
         projectId,
@@ -283,7 +284,10 @@ export default function StudentDashboard() {
                   </strong>
                 </p>
 
-                <form onSubmit={(e) => handleSubmitReview(e, selectedProject)}>
+                <form onSubmit={(e) => {
+  console.log("Form Submitted");
+  handleSubmitReview(e, selectedProject);
+}}>
                   <div className="score-section">
                     <h3>Score Criteria (out of 25)</h3>
                     {[
