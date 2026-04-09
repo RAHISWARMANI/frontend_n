@@ -309,7 +309,11 @@ export const useReviewStore = create((set, get) => ({
   },
 
   getReviewsForProject: (projectId) => {
-    return get().reviews.filter((r) => r.projectId === projectId);
+    return get().reviews.filter((r) => {
+      const storedProjectId = r.projectId?.id ?? r.projectId;
+      const targetProjectId = projectId?.id ?? projectId;
+      return storedProjectId === targetProjectId;
+    });
   },
 
   getReviewsByUser: (userId) => {

@@ -108,6 +108,10 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
         </div>
 
         <form onSubmit={handleSubmitFeedback} className="feedback-form">
+           <button type="submit" className="submit-btn">
+    Submit Feedback
+  </button>
+  
           {/* Grade and Score Section */}
           <div className="feedback-section">
             <h3>📊 Grade &amp; Score</h3>

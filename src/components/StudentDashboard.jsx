@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAssignmentStore, useProjectStore, useAuthStore, useReviewStore, useFeedbackStore } from '../store';
 import './StudentDashboard.css';
+const [reviews, setReviews] = useState([]);
 
 export default function StudentDashboard() {
   const [selectedProject, setSelectedProject] = useState(null);
@@ -39,8 +40,9 @@ export default function StudentDashboard() {
 
   const handleSubmitReview = (e, projectId) => {
     e.preventDefault();
+    console.log("Project ID:", projectId);
   console.log("Submit function working");
-    if (reviewData.feedback && reviewData.design && reviewData.functionality) {
+    if (reviewData.feedback.trim() && reviewData.design >= 0 && reviewData.functionality >= 0 && reviewData.documentation >= 0 && reviewData.collaboration >= 0) {
       submitReview({
         projectId,
         reviewedBy: currentUser.id,
@@ -62,7 +64,9 @@ export default function StudentDashboard() {
         feedback: '',
       });
       setShowReviewForm(false);
-      setSelectedProject(null);
+      setSelectedProject(projectId);
+    } else {
+      alert('Please fill in all required fields, including feedback and all scores.');
     }
   };
 
@@ -73,6 +77,8 @@ export default function StudentDashboard() {
   const getProjectReviews = (projectId) => {
     return getReviewsForProject(projectId);
   };
+
+  const selectedProjectData = projects.find((p) => p.id === selectedProject);
 
   const getAverageScore = (reviews) => {
     if (reviews.length === 0) return 0;
@@ -278,10 +284,7 @@ export default function StudentDashboard() {
                 </button>
                 <h2>Provide Peer Review</h2>
                 <p>
-                  Project:{' '}
-                  <strong>
-                    {projects.find((p) => p.id === selectedProject)?.title}
-                  </strong>
+                  Project: {selectedProjectData?.title}
                 </p>
 
                 <form onSubmit={(e) => {
@@ -335,6 +338,17 @@ export default function StudentDashboard() {
                     Submit Review
                   </button>
                 </form>
+
+                <h3>All Reviews for this Project</h3>
+                {getProjectReviews(selectedProject).map((r, index) => (
+                  <div key={r.id || index} style={{ border: '1px solid gray', margin: '10px', padding: '10px' }}>
+                    <p>Design: {r.scores.design}</p>
+                    <p>Functionality: {r.scores.functionality}</p>
+                    <p>Documentation: {r.scores.documentation}</p>
+                    <p>Collaboration: {r.scores.collaboration}</p>
+                    <p>Feedback: {r.feedback}</p>
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -350,7 +364,7 @@ export default function StudentDashboard() {
             >
               ✕
             </button>
-            <h2>Reviews for: {projects.find((p) => p.id === selectedProject)?.title}</h2>
+            <h2>Reviews for: {selectedProjectData?.title}</h2>
 
             <div className="reviews-list">
               {getProjectReviews(selectedProject).map((review) => (
