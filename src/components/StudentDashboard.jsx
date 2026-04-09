@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import { useAssignmentStore, useProjectStore, useAuthStore, useReviewStore, useFeedbackStore } from '../store';
 import './StudentDashboard.css';
-const [reviews, setReviews] = useState([]);
 
 export default function StudentDashboard() {
   const [selectedProject, setSelectedProject] = useState(null);
