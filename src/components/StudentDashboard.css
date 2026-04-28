@@ -267,7 +267,9 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 15px;
   transition: all 0.3s ease;
+  flex-wrap: wrap;
 }
 
 .review-project-card:hover {
@@ -291,6 +293,12 @@
   color: #667eea;
   font-size: 0.85em;
   font-weight: 600;
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .start-review-btn {
@@ -698,4 +706,47 @@
   left: 0;
   color: #ff9800;
   font-weight: bold;
+}
+
+.review-actions-footer {
+  margin-top: 15px;
+  padding-top: 15px;
+  border-top: 1px solid #eee;
+}
+
+.delete-review-btn {
+  padding: 8px 16px;
+  background: #ffebee;
+  color: #c62828;
+  border: 1px solid #ef5350;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.9em;
+  transition: all 0.3s ease;
+}
+
+.delete-review-btn:hover {
+  background: #ef5350;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 83, 80, 0.3);
+}
+
+.view-review-btn {
+  padding: 8px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all 0.3s ease;
+  font-size: 0.9em;
+}
+
+.view-review-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAssignmentStore, useProjectStore, useAuthStore, useReviewStore, useFeedbackStore } from '../store';
 import './StudentDashboard.css';
 
@@ -14,58 +14,122 @@ export default function StudentDashboard() {
   });
 
   const { assignments } = useAssignmentStore();
-  const { projects, addFileToProject } = useProjectStore();
+  const { projects, addFileToProject, loadProjectFiles } = useProjectStore();
   const { currentUser } = useAuthStore();
-  const { reviews: allReviews, submitReview, getReviewsForProject } = useReviewStore();
+  const { reviews: allReviews, submitReview, getReviewsForProject, loadReviews, deleteReview } = useReviewStore();
+
+  useEffect(() => {
+    loadReviews();
+    loadProjectFiles();
+  }, [loadReviews, loadProjectFiles]);
   const { getFeedbackForProject } = useFeedbackStore();
 
-  const studentProjects = projects.filter((p) => p.members.includes(currentUser?.id));
+  const getLegacyStudentAliases = (user) => {
+    if (!user) return [];
+
+    const rawValues = [user.id, user.name, user.email]
+      .filter(Boolean)
+      .map((value) => value.toString().trim().toLowerCase());
+
+    const aliases = new Set(rawValues);
+
+    rawValues.forEach((value) => {
+      if (value.includes('alice')) aliases.add('student1');
+      if (value.includes('bob')) aliases.add('student2');
+      if (value.includes('carol')) aliases.add('student3');
+      if (value.includes('student1')) aliases.add('student1');
+      if (value.includes('student2')) aliases.add('student2');
+      if (value.includes('student3')) aliases.add('student3');
+    });
+
+    return [...aliases];
+  };
+
+  const currentUserAliases = getLegacyStudentAliases(currentUser);
+  const isCurrentUsersProject = (project) =>
+    project.members.some((member) =>
+      currentUserAliases.includes(member?.toString().trim().toLowerCase())
+    );
+
+  const studentProjects = projects.filter(isCurrentUsersProject);
   const availableProjectsForReview = projects.filter(
-    (p) => !p.members.includes(currentUser?.id)
+    (project) => !isCurrentUsersProject(project)
   );
 
-  const handleFileUpload = (e, projectId) => {
+  const handleFileUpload = async (e, projectId) => {
     const file = e.target.files?.[0];
     if (file) {
-      addFileToProject(projectId, {
-        id: Date.now().toString(),
-        name: file.name,
-        uploadedBy: currentUser.id,
-        uploadedDate: new Date().toISOString().split('T')[0],
-      });
+      const fileUrl = URL.createObjectURL(file);
+      try {
+        await addFileToProject(projectId, {
+          name: file.name,
+          uploadedBy: currentUser.id,
+          uploadedDate: new Date().toISOString(),
+          url: fileUrl,
+          fileSize: file.size,
+          type: file.type,
+        });
+      } catch (error) {
+        alert('Failed to upload file. Please try again.');
+      }
       e.target.value = '';
     }
   };
 
-  const handleSubmitReview = (e, projectId) => {
+  const handleSubmitReview = async (e, projectId) => {
     e.preventDefault();
-    console.log("Project ID:", projectId);
-  console.log("Submit function working");
+    if (!currentUser?.id) {
+      alert('Your session has expired. Please log in again.');
+      return;
+    }
+
     if (reviewData.feedback.trim() && reviewData.design >= 0 && reviewData.functionality >= 0 && reviewData.documentation >= 0 && reviewData.collaboration >= 0) {
-      submitReview({
-        projectId,
-        reviewedBy: currentUser.id,
-        createdDate: new Date().toISOString().split('T')[0],
-        scores: {
-          design: parseInt(reviewData.design),
-          functionality: parseInt(reviewData.functionality),
-          documentation: parseInt(reviewData.documentation),
-          collaboration: parseInt(reviewData.collaboration),
-        },
-        feedback: reviewData.feedback,
-        status: 'submitted',
-      });
-      setReviewData({
-        design: 0,
-        functionality: 0,
-        documentation: 0,
-        collaboration: 0,
-        feedback: '',
-      });
-      setShowReviewForm(false);
-      setSelectedProject(projectId);
+      try {
+        await submitReview({
+          projectId,
+          reviewedBy: currentUser.id,
+          createdDate: new Date().toISOString().split('T')[0],
+          scores: {
+            design: parseInt(reviewData.design, 10),
+            functionality: parseInt(reviewData.functionality, 10),
+            documentation: parseInt(reviewData.documentation, 10),
+            collaboration: parseInt(reviewData.collaboration, 10),
+          },
+          feedback: reviewData.feedback,
+          status: 'submitted',
+        });
+        setReviewData({
+          design: 0,
+          functionality: 0,
+          documentation: 0,
+          collaboration: 0,
+          feedback: '',
+        });
+        await loadReviews();
+        setShowReviewForm(false);
+        setSelectedProject(projectId);
+      } catch (error) {
+        alert(error.message || 'Failed to submit review. Please try again.');
+      }
     } else {
       alert('Please fill in all required fields, including feedback and all scores.');
+    }
+  };
+
+  const handleViewReviews = (projectId) => {
+    setSelectedProject(projectId);
+    setShowReviewForm(false);
+    loadReviews();
+  };
+
+  const handleDeleteReview = async (reviewId) => {
+    if (confirm('Are you sure you want to delete this review?')) {
+      try {
+        await deleteReview(reviewId);
+        alert('Review deleted successfully');
+      } catch (error) {
+        alert('Failed to delete review. Please try again.');
+      }
     }
   };
 
@@ -152,7 +216,15 @@ export default function StudentDashboard() {
                         <h4>📁 Files ({project.files.length})</h4>
                         <ul>
                           {project.files.map((file) => (
-                            <li key={file.id}>{file.name}</li>
+                            <li key={file.id}>
+                              {file.url ? (
+                                <a href={file.url} target="_blank" rel="noreferrer">
+                                  {file.name}
+                                </a>
+                              ) : (
+                                file.name
+                              )}
+                            </li>
                           ))}
                         </ul>
                       </div>
@@ -168,7 +240,7 @@ export default function StudentDashboard() {
                         </label>
                         <button
                           className="review-btn"
-                          onClick={() => setSelectedProject(project.id)}
+                          onClick={() => handleViewReviews(project.id)}
                         >
                           👁️ View Reviews
                         </button>
@@ -254,15 +326,24 @@ export default function StudentDashboard() {
                         {project.members.length} team members
                       </div>
                     </div>
-                    <button
-                      className="start-review-btn"
-                      onClick={() => {
-                        setSelectedProject(project.id);
-                        setShowReviewForm(true);
-                      }}
-                    >
-                      Start Review
-                    </button>
+                    <div className="review-actions">
+                      <button
+                        className="start-review-btn"
+                        onClick={() => {
+                          setSelectedProject(project.id);
+                          setShowReviewForm(true);
+                          loadReviews();
+                        }}
+                      >
+                        Start Review
+                      </button>
+                      <button
+                        className="view-review-btn"
+                        onClick={() => handleViewReviews(project.id)}
+                      >
+                        View Reviews
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -366,36 +447,51 @@ export default function StudentDashboard() {
             <h2>Reviews for: {selectedProjectData?.title}</h2>
 
             <div className="reviews-list">
-              {getProjectReviews(selectedProject).map((review) => (
-                <div key={review.id} className="review-detail-card">
-                  <div className="review-header">
-                    <h3>Review by Peer</h3>
-                    <span className="review-date">{review.createdDate}</span>
-                  </div>
-
-                  <div className="scores-display">
-                    {Object.entries(review.scores).map(([criterion, score]) => (
-                      <div key={criterion} className="score-display">
-                        <span className="criterion">
-                          {criterion.charAt(0).toUpperCase() + criterion.slice(1)}
-                        </span>
-                        <span className="score-bar">
-                          <span
-                            className="score-fill"
-                            style={{ width: `${(score / 25) * 100}%` }}
-                          ></span>
-                        </span>
-                        <span className="score-number">{score}/25</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="feedback-display">
-                    <h4>Feedback</h4>
-                    <p>{review.feedback}</p>
-                  </div>
+              {getProjectReviews(selectedProject).length === 0 ? (
+                <div className="empty-state">
+                  <p>No reviews yet for this project.</p>
                 </div>
-              ))}
+              ) : (
+                getProjectReviews(selectedProject).map((review) => (
+                  <div key={review.id} className="review-detail-card">
+                    <div className="review-header">
+                      <h3>Review by Peer</h3>
+                      <span className="review-date">{review.createdDate}</span>
+                    </div>
+
+                    <div className="scores-display">
+                      {Object.entries(review.scores).map(([criterion, score]) => (
+                        <div key={criterion} className="score-display">
+                          <span className="criterion">
+                            {criterion.charAt(0).toUpperCase() + criterion.slice(1)}
+                          </span>
+                          <span className="score-bar">
+                            <span
+                              className="score-fill"
+                              style={{ width: `${(score / 25) * 100}%` }}
+                            ></span>
+                          </span>
+                          <span className="score-number">{score}/25</span>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="feedback-display">
+                      <h4>Feedback</h4>
+                      <p>{review.feedback}</p>
+                    </div>
+
+                    <div className="review-actions-footer">
+                      <button
+                        className="delete-review-btn"
+                        onClick={() => handleDeleteReview(review.id)}
+                      >
+                        🗑️ Delete Review
+                      </button>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>

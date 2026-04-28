@@ -250,6 +250,29 @@ input, textarea {
   color: white;
 }
 
+.assignment-actions {
+  display: flex;
+  gap: 10px;
+  flex-direction: column;
+}
+
+.delete-assignment-btn {
+  width: 100%;
+  padding: 10px;
+  background: #ffebee;
+  color: #c62828;
+  border: 2px solid #ef5350;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.delete-assignment-btn:hover {
+  background: #ef5350;
+  color: white;
+}
+
 .monitoring-section {
   margin-top: 40px;
 }

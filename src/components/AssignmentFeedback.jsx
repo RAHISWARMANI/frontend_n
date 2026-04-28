@@ -3,8 +3,6 @@ import { useFeedbackStore, useProjectStore, useAuthStore, useAssignmentStore } f
 import './AssignmentFeedback.css';
 
 export default function AssignmentFeedback({ projectId, assignmentId, onClose }) {
-  
-  const [reviews, setReviews] = useState([]);
   const [formData, setFormData] = useState({
     grade: 'A',
     score: 85,
@@ -13,30 +11,20 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
     areasForImprovement: '',
   });
   
-  
-
-  const { submitFeedback, getFeedbackByProjectAndTeacher } = useFeedbackStore();
+  const { submitFeedback, getFeedbackForProject, loadFeedbacks, deleteFeedback } = useFeedbackStore();
   const { getProjectById } = useProjectStore();
   const { currentUser } = useAuthStore();
-  const existingFeedback = getFeedbackByProjectAndTeacher(projectId, currentUser?.id);
+  
+  // Load feedbacks when component mounts
+  useEffect(() => {
+    loadFeedbacks();
+  }, [loadFeedbacks]);
 
- const handleSubmitFeedback = async (e) => {
+  const projectFeedbacks = getFeedbackForProject(projectId);
+
+  const handleSubmitFeedback = async (e) => {
     e.preventDefault();
-      try {
-    const response = await fetch('http://localhost:3000/api/reviews', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(formData),
-    });
-
-    const data = await response.json();
-    console.log("SUCCESS:", data);
-    alert("Feedback submitted ✅");
-
-  } catch (error) {
-    console.error("ERROR:", error);
-  }
-  console.log("Reviews:", reviews);
+    
     if (formData.comments && formData.score) {
       const strengthsList = formData.strengths
         .split('\n')
@@ -48,25 +36,43 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
         .map((a) => a.trim())
         .filter((a) => a.length > 0);
 
-      submitFeedback({
-        projectId,
-        assignmentId,
-        providedBy: currentUser.id,
-        grade: formData.grade,
-        score: parseInt(formData.score),
-        comments: formData.comments,
-        strengths: strengthsList,
-        areasForImprovement: improvementList,
-      });
+      try {
+        await submitFeedback({
+          projectId,
+          assignmentId,
+          providedBy: currentUser.id,
+          grade: formData.grade,
+          score: parseInt(formData.score),
+          comments: formData.comments,
+          strengths: strengthsList,
+          areasForImprovement: improvementList,
+        });
 
-      setFormData({
-        grade: 'A',
-        score: 85,
-        comments: '',
-        strengths: '',
-        areasForImprovement: '',
-      });
-      onClose();
+        setFormData({
+          grade: 'A',
+          score: 85,
+          comments: '',
+          strengths: '',
+          areasForImprovement: '',
+        });
+        
+        alert('Feedback submitted successfully!');
+      } catch (error) {
+        alert('Failed to submit feedback. Please try again.');
+      }
+    } else {
+      alert('Please fill in comments and score');
+    }
+  };
+
+  const handleDeleteFeedback = async (feedbackId) => {
+    if (confirm('Are you sure you want to delete this feedback?')) {
+      try {
+        await deleteFeedback(feedbackId);
+        alert('Feedback deleted successfully');
+      } catch (error) {
+        alert('Failed to delete feedback');
+      }
     }
   };
 
@@ -100,18 +106,9 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
         <div className="feedback-header">
           <h2>📝 Provide Feedback</h2>
           <p className="project-name">{project?.title}</p>
-          {existingFeedback && (
-            <div className="existing-feedback-notice">
-              ⚠️ You have already provided feedback for this assignment. Submitting will update the existing feedback.
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleSubmitFeedback} className="feedback-form">
-           <button type="submit" className="submit-btn">
-    Submit Feedback
-  </button>
-  
           {/* Grade and Score Section */}
           <div className="feedback-section">
             <h3>📊 Grade &amp; Score</h3>
@@ -216,24 +213,61 @@ export default function AssignmentFeedback({ projectId, assignmentId, onClose })
               type="submit"
               className="submit-feedback-btn"
             >
-              {existingFeedback ? '💾 Update Feedback' : '✅ Submit Feedback'}
-      
+              ✅ Submit Feedback
             </button>
           </div>
-          <button type="submit">
-  submit feedback
-</button>
-<h3>All Reviews</h3>
-
-{reviews.map((r, index) => (
-  <div key={index} style={{ border: '1px solid gray', margin: '10px', padding: '10px' }}>
-    <p>Grade: {r.grade}</p>
-    <p>Score: {r.score}</p>
-    <p>Comments: {r.comments}</p>
-  </div>
-))}
         </form>
-        
+
+        {/* Display Submitted Feedbacks */}
+        {projectFeedbacks.length > 0 && (
+          <div className="submitted-feedbacks-section">
+            <h3>📋 Submitted Feedbacks</h3>
+            {projectFeedbacks.map((feedback) => (
+              <div key={feedback.id} className="feedback-card">
+                <div className="feedback-card-header">
+                  <div className="grade-display">
+                    <span className="grade-letter">{feedback.grade}</span>
+                    <span className="grade-score">{feedback.score}/100</span>
+                  </div>
+                  <span className="feedback-date">{feedback.createdDate}</span>
+                </div>
+
+                <div className="feedback-comments">
+                  <p><strong>Comments:</strong> {feedback.comments}</p>
+                </div>
+
+                {feedback.strengths && feedback.strengths.length > 0 && (
+                  <div className="feedback-subsection">
+                    <h5>✅ Strengths</h5>
+                    <ul>
+                      {feedback.strengths.map((strength, idx) => (
+                        <li key={idx}>{strength}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {feedback.areasForImprovement && feedback.areasForImprovement.length > 0 && (
+                  <div className="feedback-subsection">
+                    <h5>🎯 Areas for Improvement</h5>
+                    <ul>
+                      {feedback.areasForImprovement.map((area, idx) => (
+                        <li key={idx}>{area}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                <button
+                  className="delete-feedback-btn"
+                  onClick={() => handleDeleteFeedback(feedback.id)}
+                >
+                  🗑️ Delete Feedback
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

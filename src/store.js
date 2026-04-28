@@ -1,78 +1,78 @@
 import { create } from 'zustand';
 
+const API_BASE = import.meta.env.VITE_API_BASE || '/api';
+const AUTH_STORAGE_KEY = 'peerreview_auth';
+
+const getStoredAuth = () => {
+  try {
+    const stored = localStorage.getItem(AUTH_STORAGE_KEY);
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveStoredAuth = (auth) => {
+  localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(auth));
+};
+
+const clearStoredAuth = () => {
+  localStorage.removeItem(AUTH_STORAGE_KEY);
+};
+
 // ============================================================================
 // AUTH STORE - Manages user authentication
 // ============================================================================
 export const useAuthStore = create((set, get) => ({
-  currentUser: null,
-  users: [
-    {
-      id: 'teacher1',
-      name: 'John Teacher',
-      email: 'teacher@school.edu',
-      password: 'password123',
-      role: 'teacher',
-    },
-    {
-      id: 'student1',
-      name: 'Alice Student',
-      email: 'alice@school.edu',
-      password: 'password123',
-      role: 'student',
-    },
-    {
-      id: 'student2',
-      name: 'Bob Student',
-      email: 'bob@school.edu',
-      password: 'password123',
-      role: 'student',
-    },
-    {
-      id: 'student3',
-      name: 'Carol Student',
-      email: 'carol@school.edu',
-      password: 'password123',
-      role: 'student',
-    },
-  ],
+  currentUser: getStoredAuth()?.currentUser || null,
+  token: getStoredAuth()?.token || null,
+  users: [],
 
-  login: (email) => {
-    const user = get().users.find((u) => u.email === email);
-    if (user) {
-      const { password, ...userWithoutPassword } = user;
-      set({ currentUser: userWithoutPassword });
-      return true;
+  login: async (email, password, role) => {
+    const response = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Login failed');
     }
-    return false;
+
+    if (role && data.user.role !== role) {
+      throw new Error('Selected role does not match this account');
+    }
+
+    set({ currentUser: data.user, token: data.token });
+    saveStoredAuth({ currentUser: data.user, token: data.token });
+    return data.user;
   },
 
   logout: () => {
-    set({ currentUser: null });
+    set({ currentUser: null, token: null });
+    clearStoredAuth();
   },
 
   getCurrentUser: () => get().currentUser,
 
-  registerUser: (userData) => {
-    const { name, email, password, role } = userData;
-    
-    // Check if user already exists
-    if (get().users.find((u) => u.email === email)) {
-      return null;
+  registerUser: async (userData) => {
+    const response = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(userData),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Registration failed');
     }
 
-    const newUser = {
-      id: `${role}${Date.now()}`,
-      name,
-      email,
-      password,
-      role,
-    };
-
-    set((state) => ({
-      users: [...state.users, newUser],
-    }));
-
-    return newUser;
+    return data.user;
   },
 
   getAllUsers: () => get().users,
@@ -80,39 +80,67 @@ export const useAuthStore = create((set, get) => ({
   getUsersByRole: (role) => {
     return get().users.filter((u) => u.role === role);
   },
+
+  resetPassword: (email) => {
+    const user = get().users.find((u) => u.email === email);
+    if (!user) {
+      return null;
+    }
+
+    // Generate a temporary password
+    const tempPassword = Math.random().toString(36).slice(-8) + Math.random().toString(36).slice(-2).toUpperCase();
+    
+    // Update user's password
+    set((state) => ({
+      users: state.users.map((u) =>
+        u.email === email ? { ...u, password: tempPassword } : u
+      ),
+    }));
+
+    return {
+      success: true,
+      tempPassword,
+      userName: user.name,
+    };
+  },
 }));
 
 // ============================================================================
 // ASSIGNMENT STORE - Manages teacher assignments
 // ============================================================================
 export const useAssignmentStore = create((set, get) => ({
-  assignments: [
-    {
-      id: 'assignment1',
-      title: 'Web Design Project',
-      description: 'Create a responsive website for a local business with modern design principles.',
-      createdBy: 'teacher1',
-      createdDate: '2026-02-10',
-      dueDate: '2026-03-15',
-      status: 'active',
-      rubric: {
-        design: 25,
-        functionality: 25,
-        documentation: 25,
-        collaboration: 25,
-      },
-    },
-  ],
+  assignments: [],
 
-  createAssignment: (assignment) => {
-    const newAssignment = {
-      ...assignment,
-      id: `assignment${Date.now()}`,
-    };
-    set((state) => ({
-      assignments: [...state.assignments, newAssignment],
-    }));
-    return newAssignment;
+  loadAssignments: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/assignments`);
+      const data = await response.json();
+      if (response.ok && data.success) {
+        set({ assignments: data.assignments });
+      }
+    } catch (error) {
+      console.error('Failed to load assignments:', error);
+    }
+  },
+
+  createAssignment: async (assignment) => {
+    const { token } = useAuthStore.getState();
+    const response = await fetch(`${API_BASE}/assignments`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify(assignment),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Failed to create assignment');
+    }
+
+    await get().loadAssignments();
+    return data.assignment;
   },
 
   updateAssignment: (id, updates) => {
@@ -127,6 +155,23 @@ export const useAssignmentStore = create((set, get) => ({
 
   getAssignmentById: (id) => {
     return get().assignments.find((a) => a.id === id);
+  },
+
+  deleteAssignment: async (id) => {
+    const { token } = useAuthStore.getState();
+    const response = await fetch(`${API_BASE}/assignments/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Failed to delete assignment');
+    }
+
+    await get().loadAssignments();
   },
 }));
 
@@ -187,6 +232,43 @@ export const useProjectStore = create((set, get) => ({
     },
   ],
 
+  loadProjectFiles: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/files`);
+      const data = await response.json();
+      if (!response.ok || !data.success) {
+        return;
+      }
+
+      const dbFilesByProject = data.files.reduce((acc, file) => {
+        if (!acc[file.projectId]) {
+          acc[file.projectId] = [];
+        }
+        acc[file.projectId].push(file);
+        return acc;
+      }, {});
+
+      set((state) => ({
+        projects: state.projects.map((project) => {
+          const baseFiles = project.files || [];
+          const dbFiles = dbFilesByProject[project.id] || [];
+          const mergedMap = new Map();
+
+          [...baseFiles, ...dbFiles].forEach((file) => {
+            mergedMap.set(file.id, file);
+          });
+
+          return {
+            ...project,
+            files: [...mergedMap.values()],
+          };
+        }),
+      }));
+    } catch (error) {
+      console.error('Failed to load project files:', error);
+    }
+  },
+
   createProject: (project) => {
     const newProject = {
       ...project,
@@ -223,18 +305,37 @@ export const useProjectStore = create((set, get) => ({
     return get().projects.find((p) => p.id === id);
   },
 
-  addFileToProject: (projectId, file) => {
+  addFileToProject: async (projectId, file) => {
+    const response = await fetch(`${API_BASE}/files`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        ...file,
+        projectId,
+      }),
+    });
+
+    const data = await response.json();
+    if (!response.ok || !data.success) {
+      throw new Error(data.message || 'Failed to upload file');
+    }
+
+    const savedFile = data.file;
     set((state) => ({
       projects: state.projects.map((p) =>
         p.id === projectId
           ? {
               ...p,
-              files: [...p.files, file],
+              files: [...p.files.filter((existing) => existing.id !== savedFile.id), savedFile],
               lastUpdated: new Date().toISOString().split('T')[0],
             }
           : p
       ),
     }));
+
+    return savedFile;
   },
 
   removeFileFromProject: (projectId, fileId) => {
@@ -256,48 +357,45 @@ export const useProjectStore = create((set, get) => ({
 // REVIEW STORE - Manages peer reviews and feedback
 // ============================================================================
 export const useReviewStore = create((set, get) => ({
-  reviews: [
-    {
-      id: 'review1',
-      projectId: 'project1',
-      reviewedBy: 'student3',
-      createdDate: '2026-02-24',
-      scores: {
-        design: 20,
-        functionality: 18,
-        documentation: 15,
-        collaboration: 22,
-      },
-      feedback:
-        'Great website design with good layout and color scheme. The functionality is mostly complete but there are some bugs in the shopping cart. Documentation could be more detailed with comments in code.',
-      status: 'submitted',
-    },
-    {
-      id: 'review2',
-      projectId: 'project1',
-      reviewedBy: 'student2',
-      createdDate: '2026-02-25',
-      scores: {
-        design: 22,
-        functionality: 21,
-        documentation: 18,
-        collaboration: 23,
-      },
-      feedback:
-        'Excellent responsive design that works on mobile devices. The functionality is solid with good user experience. Team collaboration seems strong based on code organization.',
-      status: 'submitted',
-    },
-  ],
+  reviews: [], // Start empty, will load from API
 
-  submitReview: (review) => {
-    const newReview = {
-      ...review,
-      id: `review${Date.now()}`,
-    };
-    set((state) => ({
-      reviews: [...state.reviews, newReview],
-    }));
-    return newReview;
+  // Load reviews from API
+  loadReviews: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/reviews`);
+      if (response.ok) {
+        const reviews = await response.json();
+        set({ reviews });
+      } else {
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Failed to load reviews:', errorData.message || response.statusText);
+      }
+    } catch (error) {
+      console.error('Failed to load reviews:', error);
+    }
+  },
+
+  submitReview: async (review) => {
+    try {
+      const response = await fetch(`${API_BASE}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(review),
+      });
+
+      const body = await response.json().catch(() => ({}));
+      if (response.ok) {
+        await get().loadReviews();
+        return body.review;
+      } else {
+        throw new Error(body.message || 'Failed to submit review');
+      }
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      throw error;
+    }
   },
 
   updateReview: (id, updates) => {
@@ -309,11 +407,7 @@ export const useReviewStore = create((set, get) => ({
   },
 
   getReviewsForProject: (projectId) => {
-    return get().reviews.filter((r) => {
-      const storedProjectId = r.projectId?.id ?? r.projectId;
-      const targetProjectId = projectId?.id ?? projectId;
-      return storedProjectId === targetProjectId;
-    });
+    return get().reviews.filter((r) => r.projectId === projectId);
   },
 
   getReviewsByUser: (userId) => {
@@ -343,10 +437,23 @@ export const useReviewStore = create((set, get) => ({
     return averages;
   },
 
-  deleteReview: (id) => {
-    set((state) => ({
-      reviews: state.reviews.filter((r) => r.id !== id),
-    }));
+  deleteReview: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/reviews/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Reload reviews after deletion
+        await get().loadReviews();
+        return true;
+      } else {
+        throw new Error('Failed to delete review');
+      }
+    } catch (error) {
+      console.error('Error deleting review:', error);
+      throw error;
+    }
   },
 }));
 
@@ -354,41 +461,43 @@ export const useReviewStore = create((set, get) => ({
 // FEEDBACK STORE - Manages teacher feedback on assignments and projects
 // ============================================================================
 export const useFeedbackStore = create((set, get) => ({
-  feedbacks: [
-    {
-      id: 'feedback1',
-      projectId: 'project1',
-      assignmentId: 'assignment1',
-      providedBy: 'teacher1',
-      createdDate: '2026-02-26',
-      grade: 'A',
-      score: 85,
-      comments: 'Excellent work on the overall design and implementation. The website is responsive and user-friendly. Consider adding more interactive features in future projects.',
-      strengths: [
-        'Clean and modern design',
-        'Good responsive layout',
-        'Well-organized code structure',
-      ],
-      areasForImprovement: [
-        'Add form validation',
-        'Improve database optimization',
-        'Include more unit tests',
-      ],
-      status: 'submitted',
-    },
-  ],
+  feedbacks: [],
 
-  submitFeedback: (feedback) => {
-    const newFeedback = {
-      ...feedback,
-      id: `feedback${Date.now()}`,
-      createdDate: new Date().toISOString().split('T')[0],
-      status: 'submitted',
-    };
-    set((state) => ({
-      feedbacks: [...state.feedbacks, newFeedback],
-    }));
-    return newFeedback;
+  // Load feedbacks from API
+  loadFeedbacks: async () => {
+    try {
+      const response = await fetch(`${API_BASE}/feedbacks`);
+      if (response.ok) {
+        const feedbacks = await response.json();
+        set({ feedbacks });
+      }
+    } catch (error) {
+      console.error('Failed to load feedbacks:', error);
+    }
+  },
+
+  submitFeedback: async (feedback) => {
+    try {
+      const response = await fetch(`${API_BASE}/feedbacks`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(feedback),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        // Reload feedbacks after submitting
+        await get().loadFeedbacks();
+        return result.feedback;
+      } else {
+        throw new Error('Failed to submit feedback');
+      }
+    } catch (error) {
+      console.error('Error submitting feedback:', error);
+      throw error;
+    }
   },
 
   updateFeedback: (id, updates) => {
@@ -417,9 +526,22 @@ export const useFeedbackStore = create((set, get) => ({
     return get().feedbacks.filter((f) => f.providedBy === teacherId);
   },
 
-  deleteFeedback: (id) => {
-    set((state) => ({
-      feedbacks: state.feedbacks.filter((f) => f.id !== id),
-    }));
+  deleteFeedback: async (id) => {
+    try {
+      const response = await fetch(`${API_BASE}/feedbacks/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (response.ok) {
+        // Reload feedbacks after deletion
+        await get().loadFeedbacks();
+        return true;
+      } else {
+        throw new Error('Failed to delete feedback');
+      }
+    } catch (error) {
+      console.error('Error deleting feedback:', error);
+      throw error;
+    }
   },
 }));

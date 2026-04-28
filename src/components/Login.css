@@ -466,3 +466,181 @@
     font-size: 1.2em;
   }
 }
+
+/* Forgot Password Styles */
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #667eea;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 0.85em;
+  text-decoration: underline;
+  padding: 5px 0;
+  transition: all 0.3s ease;
+  margin: 5px 0;
+}
+
+.dark-mode .forgot-password-link {
+  color: #667eea;
+}
+
+.forgot-password-link:hover {
+  color: #764ba2;
+  transform: translateX(2px);
+}
+
+.password-reset-result {
+  text-align: center;
+}
+
+.password-reset-result h2 {
+  color: #2e7d32;
+  margin-bottom: 10px;
+}
+
+.dark-mode .password-reset-result h2 {
+  color: #6bff6b;
+}
+
+.reset-message {
+  background: #e8f5e9;
+  padding: 20px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.dark-mode .reset-message {
+  background: #2a4a2a;
+}
+
+.reset-message p {
+  color: #333;
+  margin: 10px 0;
+  line-height: 1.5;
+}
+
+.dark-mode .reset-message p {
+  color: #ddd;
+}
+
+.reset-message strong {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+.dark-mode .reset-message strong {
+  color: #6bff6b;
+}
+
+.temp-password-box {
+  background: white;
+  border: 2px solid #2e7d32;
+  border-radius: 8px;
+  padding: 15px;
+  margin: 15px 0;
+  text-align: center;
+}
+
+.dark-mode .temp-password-box {
+  background: #3a3a4e;
+  border-color: #667eea;
+}
+
+.temp-password-label {
+  color: #555;
+  font-weight: 600;
+  margin: 0;
+  font-size: 0.9em;
+  margin-bottom: 8px;
+}
+
+.dark-mode .temp-password-label {
+  color: #ddd;
+}
+
+.temp-password-value {
+  background: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 10px;
+  font-family: monospace;
+  font-size: 1.1em;
+  font-weight: 700;
+  color: #667eea;
+  margin: 0 0 10px 0;
+  word-break: break-all;
+  user-select: all;
+}
+
+.dark-mode .temp-password-value {
+  background: #2a2a3e;
+  border-color: #4a4a5e;
+  color: #667eea;
+}
+
+.copy-btn {
+  padding: 8px 12px;
+  background: #2e7d32;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 0.85em;
+  transition: all 0.3s ease;
+}
+
+.dark-mode .copy-btn {
+  background: #667eea;
+}
+
+.copy-btn:hover {
+  transform: scale(1.05);
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.3);
+}
+
+.dark-mode .copy-btn:hover {
+  box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.reset-instructions {
+  background: #fff3cd;
+  border-left: 4px solid #ff9800;
+  padding: 15px;
+  border-radius: 4px;
+  margin: 15px 0;
+  text-align: left;
+}
+
+.dark-mode .reset-instructions {
+  background: #4a3a2a;
+  border-left-color: #ff9800;
+}
+
+.reset-instructions h3 {
+  color: #666;
+  margin: 0 0 10px 0;
+  font-size: 0.95em;
+}
+
+.dark-mode .reset-instructions h3 {
+  color: #ddd;
+}
+
+.reset-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+  color: #555;
+}
+
+.dark-mode .reset-instructions ol {
+  color: #ccc;
+}
+
+.reset-instructions li {
+  margin: 5px 0;
+  font-size: 0.85em;
+  line-height: 1.5;
+}

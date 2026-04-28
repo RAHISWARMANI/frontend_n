@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAssignmentStore, useProjectStore, useAuthStore, useFeedbackStore } from '../store';
 import AssignmentFeedback from './AssignmentFeedback';
 import './TeacherDashboard.css';
@@ -17,30 +17,36 @@ export default function TeacherDashboard() {
     dueDate: '',
   });
 
-  const { assignments, createAssignment } = useAssignmentStore();
+  const { assignments, createAssignment, deleteAssignment, loadAssignments } = useAssignmentStore();
   const { projects } = useProjectStore();
   const { currentUser } = useAuthStore();
   const { getFeedbackForProject } = useFeedbackStore();
 
   const teacherAssignments = assignments.filter((a) => a.createdBy === currentUser?.id);
 
-  const handleCreateAssignment = (e) => {
+  useEffect(() => {
+    loadAssignments();
+  }, [loadAssignments]);
+
+  const handleCreateAssignment = async (e) => {
     e.preventDefault();
     if (formData.title && formData.description && formData.dueDate) {
-      createAssignment({
-        ...formData,
-        createdBy: currentUser.id,
-        createdDate: new Date().toISOString().split('T')[0],
-        status: 'active',
-        rubric: {
-          design: 25,
-          functionality: 25,
-          documentation: 25,
-          collaboration: 25,
-        },
-      });
-      setFormData({ title: '', description: '', dueDate: '' });
-      setShowCreateForm(false);
+      try {
+        await createAssignment({
+          ...formData,
+          status: 'active',
+          rubric: {
+            design: 25,
+            functionality: 25,
+            documentation: 25,
+            collaboration: 25,
+          },
+        });
+        setFormData({ title: '', description: '', dueDate: '' });
+        setShowCreateForm(false);
+      } catch (error) {
+        alert(error.message || 'Failed to create assignment');
+      }
     }
   };
 
@@ -61,6 +67,17 @@ export default function TeacherDashboard() {
   const handleProvideFeedback = (projectId, assignmentId) => {
     setSelectedProjectForFeedback(projectId);
     setSelectedAssignmentForFeedback(assignmentId);
+  };
+
+  const handleDeleteAssignment = async (assignmentId) => {
+    if (confirm('Are you sure you want to delete this assignment? All associated projects will still remain.')) {
+      try {
+        await deleteAssignment(assignmentId);
+        alert('Assignment deleted successfully');
+      } catch (error) {
+        alert(error.message || 'Failed to delete assignment');
+      }
+    }
   };
 
   const getAssignmentProjects = (assignmentId) => {
@@ -171,12 +188,20 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
 
-  <button 
-  className="view-btn"
-  onClick={() => handleViewDetails(assignment.id)}
->
-  View Details →
-</button>
+                  <div className="assignment-actions">
+                    <button 
+                      className="view-btn"
+                      onClick={() => handleViewDetails(assignment.id)}
+                    >
+                      View Details →
+                    </button>
+                    <button
+                      className="delete-assignment-btn"
+                      onClick={() => handleDeleteAssignment(assignment.id)}
+                    >
+                      🗑️ Delete
+                    </button>
+                  </div>
                 </div>
               );
             })}
